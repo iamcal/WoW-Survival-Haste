@@ -5,17 +5,41 @@
 
 	ini_set('memory_limit', '100M');
 
-	include(dirname(__FILE__).'/../include/init.php');
+	#
+	# this come from flamework, but using a different library should be easy.
+	# https://github.com/exflickr/flamework/blob/master/www/include/lib_http.php
+	#
 
-	loadlib('curl');
+	include('lib_http.php');
 
-for ($i=0; $i<=100; $i++){
-	get_deeps($i * 100);
-}
+
+	#
+	# change the values here to test different ranges
+	#
+
+	for ($i=0; $i<=100; $i++){
+		get_deeps($i * 100);
+	}
+
+
+
+	#
+	# this function fetches the data from femaledwarf
+	#
+
 
 function get_deeps($haste){
 
-	$diff = $haste - 349;
+	#
+	# enter your current haste total here
+	#
+
+	$diff = $haste - 2000;
+
+
+	#
+	# params to pass to FD
+	#
 
 	$params = array(
 		'battle_buff'	=>'',
@@ -258,46 +282,40 @@ function get_deeps($haste){
 		'talent_url'	=>'',
 	);
 
-	$pairs = array();
-	foreach ($params as $k => $v){
-		$k = preg_replace('!\[\]\d+!', '[]', $k);
-		$pairs[] = urlencode($k).'='.urlencode($v);
-	}
-	$body = implode('&', $pairs);
+
+	#
+	# make HTTP request
+	#
+
+	$headers = array(
+		'Content-Type'		=> 'application/x-www-form-urlencoded; charset=UTF-8',
+		'X-Requested-With'	=> 'XMLHttpRequest',
+		'Referer'		=> 'http://www.femaledwarf.com/',
+		'Cookie'		=> 'account_id=12841; acct_username=iamcal; acct_email=cal%40iamcal.com; debug_display=1',
+	);
+
+	$ret = http_post('http://www.femaledwarf.com/services/update_stats.php', $params, $headers);
 
 
-	list($code, $head, $body) = curl_http_request(array(
-		'url'		=> 'http://www.femaledwarf.com/services/update_stats.php',
-		'method'	=> 'POST',
-		'timeout'	=> 10,
-		'headers'	=> array(
-			'Content-Type'		=> 'application/x-www-form-urlencoded; charset=UTF-8',
-			'X-Requested-With'	=> 'XMLHttpRequest',
-			'Referer'		=> 'http://www.femaledwarf.com/',
-			'Cookie'		=> 'account_id=12841; acct_username=iamcal; acct_email=cal%40iamcal.com; debug_display=1',
-		),
-		'post'		=> 1,
-		'rawBody'	=> $body,
-	));
-
-
+	#
 	# find DPS & haste
+	#
 
 	$dps = 0;
 	$haste = 0;
 	$per = 0;
 
-	if (preg_match('!<span id="combined_dps">(\d+\.\d+)</span>!', $body, $m)){
+	if (preg_match('!<span id="combined_dps">(\d+\.\d+)</span>!', $ret['body'], $m)){
 
 		$dps = $m[1];
 	}
 
-	if (preg_match('!Haste Rating \+ 1</th>(\s+)<td>(\d+\.\d+)!s', $body, $m)){
+	if (preg_match('!Haste Rating \+ 1</th>(\s+)<td>(\d+\.\d+)!s', $ret['body'], $m)){
 
 		$per = $m[2];
 	}
 
-	if (preg_match('!Haste Rating:</th>(\s+)<td align="right">(\d+)!s', $body, $m)){
+	if (preg_match('!Haste Rating:</th>(\s+)<td align="right">(\d+)!s', $ret['body'], $m)){
 
 		$haste = $m[2];
 	}
